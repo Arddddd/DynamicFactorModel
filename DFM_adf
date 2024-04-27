@@ -1,0 +1,90 @@
+import pandas as pd
+import numpy as np
+
+from statsmodels.graphics.tsaplots import plot_acf
+from statsmodels.graphics.tsaplots import plot_pacf
+from statsmodels.tsa.stattools import adfuller as ADF
+from statsmodels.stats.diagnostic import acorr_ljungbox
+import statsmodels.api as sm
+
+import matplotlib.pyplot as plt
+
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+
+
+def process_data(dataname):
+    dta = pd.read_excel(dataname + '_raw_data.xlsx', index_col=0)
+    columnlist = dta.columns
+
+    # Create log-differenced series
+    for c in columnlist:
+        dta['dln_' + c] = (np.log(dta[c])).diff() * 100
+
+    # De-mean and standardize
+    for c in columnlist:
+        dta['std_' + c] = (dta['dln_' + c] - dta['dln_' + c].mean()) / dta['dln_' + c].std()
+
+    # 数据写入excel
+    dta.to_excel(dataname + "_data.xlsx")
+
+
+def Z_data(dataname):
+    dta = pd.read_excel(dataname + '_raw_data.xlsx', index_col=0)
+    columnlist = dta.columns
+
+    # De-mean and standardize
+    for c in columnlist:
+        dta['std_' + c] = (dta[c] - dta[c].mean()) / dta[c].std()
+
+    # 数据写入excel
+    dta.to_excel(dataname + "_std_data.xlsx")
+
+
+def getADF(colname):
+    # 原始序列
+    D_data = data[colname].dropna()
+    # 一阶差分序列
+    D_data_diff1 = data[colname].diff(1).dropna()
+    # 二阶差分序列
+    D_data_diff2 = D_data_diff1.diff(1).dropna()
+
+    # # # 时序图
+    # fig = plt.figure(figsize=(10, 20))
+    # ax1 = fig.add_subplot(311)
+    # ax1.plot(D_data, label="原序列")
+    # plt.legend(loc="upper left")
+    # ax2 = fig.add_subplot(312)
+    # ax2.plot(D_data_diff1, label="一阶差分")
+    # plt.legend(loc="upper left")
+    # ax3 = fig.add_subplot(313)
+    # ax3.plot(D_data_diff2, label="二阶差分")
+    # plt.legend(loc="upper left")
+    # plt.show()
+
+    # # ADF检验（平稳性检测）
+    D_ = D_data
+    print(colname)
+    print(u'不含截距项：', '(', round(ADF(D_, autolag='BIC', regression='n')[1], 3),
+          round(ADF(D_, autolag='BIC', regression='n')[0], 3), ')')
+    print(u'含截距项：', '(', round(ADF(D_, autolag='BIC', regression='c')[1], 3),
+          round(ADF(D_, autolag='BIC', regression='c')[0], 3), ')')
+    print(u'含截距项和趋势：', '(', round(ADF(D_, autolag='BIC', regression='ct')[1], 3),
+          round(ADF(D_, autolag='BIC', regression='ct')[0], 3), ')')
+    print(u'含截距项和二次趋势：', '(', round(ADF(D_, autolag='BIC', regression='ctt')[1], 3),
+          round(ADF(D_, autolag='BIC', regression='ctt')[0], 3), ')')
+
+
+data = pd.read_excel(r'cn_std_data.xlsx', index_col=0)  # z值
+data = data[(data.index >= '1997-01-01') & (data.index < '2019-03-01')].copy()
+
+
+'''################################################## 平稳性检验 #####################################################'''
+
+# # 结果在excel里
+for i in ['std_IAV', 'std_CGTRS', 'std_FAIC', 'std_CPI', 'std_PPI', 'std_M2', 'std_FILB']:
+    getADF(i)
+
+'''################################################## 平稳性检验 #####################################################'''
+
+
